@@ -38,7 +38,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authz -> authz
-                        .requestMatchers("/api/public/**", "/api/auth/login", "/actuator/**").permitAll()
+                        .requestMatchers("/api/public/**", "/api/auth/**", "/oauth2/**", "/login/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("client_admin")
                         .requestMatchers("/api/user/**").hasRole("client_admin")
                         .anyRequest().authenticated()
@@ -47,6 +47,10 @@ public class SecurityConfig {
                         .jwt(jwt -> jwt
                                 .jwtAuthenticationConverter(jwtAuthConverter)
                         )
+                )
+                .oauth2Login(oauth2 -> oauth2
+                        .defaultSuccessUrl("/api/auth/oauth2-success", true)
+                        .failureUrl("/api/auth/oauth2-failure")
                 );
 
         return http.build();
