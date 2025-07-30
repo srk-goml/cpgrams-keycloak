@@ -22,6 +22,7 @@ public class UserService {
         String firstName = jwt.getClaimAsString("given_name");
         String lastName = jwt.getClaimAsString("family_name");
 
+
         Optional<UserProfile> existingUser = userProfileRepository.findByKeycloakUserId(keycloakUserId);
 
         UserProfile userProfile;
