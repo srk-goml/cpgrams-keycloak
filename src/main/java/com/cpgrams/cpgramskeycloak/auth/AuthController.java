@@ -2,6 +2,8 @@ package com.cpgrams.cpgramskeycloak.auth;
 
 import com.cpgrams.cpgramskeycloak.dto.LoginRequest;
 import com.cpgrams.cpgramskeycloak.dto.RefreshTokenRequest;
+import com.cpgrams.cpgramskeycloak.dto.RegistrationRequest;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +22,53 @@ public class AuthController {
     
     @Autowired
     private com.cpgrams.cpgramskeycloak.service.GoogleOAuth2Service googleOAuth2Service;
+
+    @PostMapping("/register")
+    public ResponseEntity<Map<String, Object>> registerUser(@Valid @RequestBody RegistrationRequest registrationRequest) {
+
+        if (registrationRequest.getUsername() == null || registrationRequest.getUsername().trim().isEmpty()) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("status", "error");
+            errorResponse.put("message", "Username is required");
+            return ResponseEntity.badRequest().body(errorResponse);
+        }
+
+        if (registrationRequest.getEmail() == null || registrationRequest.getEmail().trim().isEmpty()) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("status", "error");
+            errorResponse.put("message", "Email is required");
+            return ResponseEntity.badRequest().body(errorResponse);
+        }
+
+        if (registrationRequest.getPassword() == null || registrationRequest.getPassword().trim().isEmpty()) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("status", "error");
+            errorResponse.put("message", "Password is required");
+            return ResponseEntity.badRequest().body(errorResponse);
+        }
+
+        if (registrationRequest.getFirstName() == null || registrationRequest.getFirstName().trim().isEmpty()) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("status", "error");
+            errorResponse.put("message", "First name is required");
+            return ResponseEntity.badRequest().body(errorResponse);
+        }
+
+        if (registrationRequest.getLastName() == null || registrationRequest.getLastName().trim().isEmpty()) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("status", "error");
+            errorResponse.put("message", "Last name is required");
+            return ResponseEntity.badRequest().body(errorResponse);
+        }
+
+        Map<String, Object> response = authService.registerUser(registrationRequest);
+
+        if ("success".equals(response.get("status"))) {
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } else {
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
 
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> login(@RequestBody LoginRequest loginRequest) {

@@ -1,5 +1,14 @@
 package com.cpgrams.cpgramskeycloak.auth;
 
+import com.cpgrams.cpgramskeycloak.dto.RegistrationRequest;
+import jakarta.ws.rs.core.Response;
+import org.keycloak.admin.client.CreatedResponseUtil;
+import org.keycloak.admin.client.Keycloak;
+import org.keycloak.admin.client.KeycloakBuilder;
+import org.keycloak.admin.client.resource.RolesResource;
+import org.keycloak.admin.client.resource.UsersResource;
+import org.keycloak.representations.idm.CredentialRepresentation;
+import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -10,6 +19,7 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -26,6 +36,15 @@ public class AuthService {
 
     @Value("${spring.security.oauth2.client.provider.keycloak.token-uri}")
     private String tokenUri;
+
+    @Value("${keycloak.admin.username:admin}")
+    private String adminUsername;
+
+    @Value("${keycloak.admin.password:admin}")
+    private String adminPassword;
+
+    @Value("${keycloak.realm:cpgrams}")
+    private String realm;
 
     public Map<String, Object> login(String username, String password) {
         try {
@@ -69,6 +88,112 @@ public class AuthService {
             }
         } catch (Exception e) {
             return createErrorResponse("Login failed", "Unexpected error: " + e.getMessage());
+        }
+    }
+
+    public Map<String, Object> registerUser(RegistrationRequest registrationRequest) {
+        try {
+
+            Keycloak keycloak = KeycloakBuilder.builder()
+                    .serverUrl("http://localhost:8080")
+                    .realm("master")
+                    .username(adminUsername)
+                    .password(adminPassword)
+                    .clientId("admin-cli")
+                    .build();
+
+
+            UsersResource usersResource = keycloak.realm(realm).users();
+            List<UserRepresentation> existingUsers = usersResource.search(registrationRequest.getUsername());
+
+            if (!existingUsers.isEmpty()) {
+                return createErrorResponse("Registration failed", "Username already exists");
+            }
+
+
+            List<UserRepresentation> existingEmails = usersResource.search(null, null, null, registrationRequest.getEmail(), null, null);
+
+            if (!existingEmails.isEmpty()) {
+                return createErrorResponse("Registration failed", "Email already exists");
+            }
+
+
+            UserRepresentation user = new UserRepresentation();
+            user.setEnabled(true);
+            user.setUsername(registrationRequest.getUsername());
+            user.setEmail(registrationRequest.getEmail());
+            user.setFirstName(registrationRequest.getFirstName());
+            user.setLastName(registrationRequest.getLastName());
+            user.setEmailVerified(true);
+
+
+            CredentialRepresentation credential = new CredentialRepresentation();
+            credential.setType(CredentialRepresentation.PASSWORD);
+            credential.setValue(registrationRequest.getPassword());
+            credential.setTemporary(false);
+            user.setCredentials(List.of(credential));
+
+
+            Response response = usersResource.create(user);
+
+            if (response.getStatus() == 201) {
+                // User created successfully
+                String userId = CreatedResponseUtil.getCreatedId(response);
+
+                // Assign the specified role (defaults to "user")
+                assignRoleToUser(keycloak, userId, registrationRequest.getRole());
+
+                Map<String, Object> result = new HashMap<>();
+                result.put("status", "success");
+                result.put("message", "User registered successfully");
+                result.put("userId", userId);
+                result.put("username", registrationRequest.getUsername());
+                result.put("email", registrationRequest.getEmail());
+                result.put("role", registrationRequest.getRole());
+
+                return result;
+            } else {
+                String errorMessage = response.readEntity(String.class);
+                return createErrorResponse("Registration failed", "Failed to create user: " + errorMessage);
+            }
+
+        } catch (Exception e) {
+            return createErrorResponse("Registration failed", "Unexpected error: " + e.getMessage());
+        }
+    }
+
+    private void assignRoleToUser(Keycloak keycloak, String userId, String roleName) {
+        try {
+
+            RolesResource rolesResource = keycloak.realm(realm).roles();
+            var role = rolesResource.get(roleName).toRepresentation();
+
+            if (role != null) {
+
+                keycloak.realm(realm).users().get(userId).roles().realmLevel()
+                        .add(List.of(role));
+            } else {
+
+                var defaultRole = rolesResource.get("user").toRepresentation();
+                if (defaultRole != null) {
+                    keycloak.realm(realm).users().get(userId).roles().realmLevel()
+                            .add(List.of(defaultRole));
+                }
+            }
+        } catch (Exception e) {
+
+            System.err.println("Failed to assign role '" + roleName + "' to user: " + e.getMessage());
+
+
+            try {
+                var defaultRole = keycloak.realm(realm).roles().get("user").toRepresentation();
+                if (defaultRole != null) {
+                    keycloak.realm(realm).users().get(userId).roles().realmLevel()
+                            .add(List.of(defaultRole));
+                }
+            } catch (Exception fallbackException) {
+                System.err.println("Failed to assign default role: " + fallbackException.getMessage());
+            }
         }
     }
 
