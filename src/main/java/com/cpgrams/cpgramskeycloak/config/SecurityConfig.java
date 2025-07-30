@@ -22,8 +22,6 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static org.springframework.security.config.http.SessionCreationPolicy.STATELESS;
-
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
@@ -36,11 +34,18 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+                        .maximumSessions(1)
+                )
                 .authorizeHttpRequests(authz -> authz
-                        .requestMatchers("/api/public/**", "/api/auth/**", "/oauth2/**", "/login/**").permitAll()
+                        .requestMatchers("/", "/home", "/login", "/register", "/api-docs").permitAll()
+                        .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**").permitAll()
+                        .requestMatchers("/api/public/**", "/api/auth/**", "/oauth2/**", "/login/**", "/login-success").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("client_admin")
                         .requestMatchers("/api/user/**").hasRole("client_admin")
+                        .requestMatchers("/dashboard", "/profile").permitAll()  // Changed from authenticated() to permitAll()
+                        .requestMatchers("/admin").hasRole("client_admin")
                         .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
@@ -49,13 +54,20 @@ public class SecurityConfig {
                         )
                 )
                 .oauth2Login(oauth2 -> oauth2
-                        .defaultSuccessUrl("/api/auth/oauth2-success", true)
-                        .failureUrl("/api/auth/oauth2-failure")
+                        .loginPage("/login")
+                        .defaultSuccessUrl("/dashboard", true)
+                        .failureUrl("/login?error=true")
+                )
+                .logout(logout -> logout
+                        .logoutUrl("/api/auth/logout")
+                        .logoutSuccessUrl("/")
+                        .invalidateHttpSession(true)
+                        .deleteCookies("JSESSIONID")
+                        .permitAll()
                 );
 
         return http.build();
     }
-
 
     @Bean
     public RestTemplate restTemplate() {

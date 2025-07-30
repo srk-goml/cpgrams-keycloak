@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>OAuth2 Callback</title>
+</head>
+<body>
+    <div class="container">
+        <div class="row">
+            <div class="col-md-6 offset-md-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h4>Processing your login...</h4>
+                        <p>Please wait while we set up your session.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script th:inline="javascript">
+        // Get data from Thymeleaf model
+        const accessToken = /*[[${access_token}]]*/ '';
+        const refreshToken = /*[[${refresh_token}]]*/ '';
+        const userInfo = /*[[${user_info}]]*/ {};
+
+        // Save to localStorage
+        if (accessToken) {
+            localStorage.setItem('access_token', accessToken);
+        }
+        if (refreshToken) {
+            localStorage.setItem('refresh_token', refreshToken);
+        }
+        if (userInfo && userInfo.email) {
+            localStorage.setItem('user_email', userInfo.email);
+            localStorage.setItem('user_name', userInfo.name || '');
+            localStorage.setItem('user_picture', userInfo.picture || '');
+        }
+
+        // Redirect to dashboard after a short delay
+        setTimeout(function() {
+            window.location.href = '/dashboard';
+        }, 1000);
+    </script>
+</body>
+</html>

@@ -73,6 +73,13 @@ public class AuthService {
                 result.put("scope", tokenResponse.get("scope"));
                 result.put("status", "success");
                 result.put("message", "Login successful");
+                
+                // Simple user data for demo
+                result.put("username", username);
+                result.put("email", username + "@example.com");
+                result.put("firstName", "Demo");
+                result.put("lastName", "User");
+                result.put("role", "user");
 
                 return result;
             } else {

@@ -5,6 +5,7 @@ import com.cpgrams.cpgramskeycloak.dto.RefreshTokenRequest;
 import com.cpgrams.cpgramskeycloak.dto.RegistrationRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -22,6 +23,9 @@ public class AuthController {
     
     @Autowired
     private com.cpgrams.cpgramskeycloak.service.GoogleOAuth2Service googleOAuth2Service;
+
+    @Value("${spring.security.oauth2.client.registration.google.client-id}")
+    private String googleClientId;
 
     @PostMapping("/register")
     public ResponseEntity<Map<String, Object>> registerUser(@Valid @RequestBody RegistrationRequest registrationRequest) {
@@ -144,7 +148,7 @@ public class AuthController {
     @GetMapping("/google/login")
     public ResponseEntity<Map<String, Object>> googleLogin() {
         String googleAuthUrl = "https://accounts.google.com/o/oauth2/v2/auth?" +
-                "client_id=" + "232653743705-19nrvan4e4q5qa67eut3qpbq740l8va4.apps.googleusercontent.com" +
+                "client_id=" + googleClientId +
                 "&redirect_uri=" + "http://localhost:8082/oauth2/callback/google" +
                 "&response_type=code" +
                 "&scope=email profile" +
@@ -230,6 +234,17 @@ public class AuthController {
         response.put("message", "OAuth2 login failed");
         response.put("timestamp", System.currentTimeMillis());
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Map<String, Object>> logout(@AuthenticationPrincipal Jwt jwt) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "success");
+        response.put("message", "User logged out successfully");
+        response.put("user", jwt != null ? jwt.getClaimAsString("preferred_username") : "unknown");
+        response.put("timestamp", System.currentTimeMillis());
+
+        return ResponseEntity.ok(response);
     }
 
     // Inner classes for request bodies
