@@ -33,6 +33,8 @@ public class WebController {
     @Value("${spring.security.oauth2.client.registration.google.client-id}")
     private String googleClientId;
 
+
+
     @GetMapping("/")
     public String home(Model model) {
         model.addAttribute("title", "CPGrams Keycloak Integration");
@@ -131,7 +133,7 @@ public class WebController {
     public String googleOAuth2Login() {
         // Redirect directly to Google OAuth2 instead of the API endpoint
         return "redirect:https://accounts.google.com/o/oauth2/v2/auth?" +
-               "client_id=232653743705-sr8in6mgl7lrovrp9ai764bri3ibffav.apps.googleusercontent.com" +
+               "client_id=" + googleClientId +
                "&redirect_uri=http://localhost:8082/oauth2/callback/google" +
                "&response_type=code" +
                "&scope=email profile" +

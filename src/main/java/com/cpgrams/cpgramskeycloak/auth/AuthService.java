@@ -55,12 +55,19 @@ public class AuthService {
             body.add("grant_type", "password");
             body.add("client_id", clientId);
             body.add("client_secret", clientSecret);
-            body.add("username", username);
-            body.add("password", password);
+
+            if (username.matches("^\\d{10}$")) {
+                body.add("mobile", username);
+                body.add("otp", password);
+            } else{
+                body.add("username", username);
+                body.add("password", password);
+            }
 
             HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
 
             ResponseEntity<Map> response = restTemplate.postForEntity(tokenUri, request, Map.class);
+
 
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 Map<String, Object> tokenResponse = response.getBody();
@@ -73,10 +80,10 @@ public class AuthService {
                 result.put("scope", tokenResponse.get("scope"));
                 result.put("status", "success");
                 result.put("message", "Login successful");
-                
+
                 // Simple user data for demo
                 result.put("username", username);
-                result.put("email", username + "@example.com");
+                result.put("email", username);
                 result.put("firstName", "Demo");
                 result.put("lastName", "User");
                 result.put("role", "user");
